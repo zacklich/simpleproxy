@@ -1,0 +1,13 @@
+HTTP/1.0 200 OK
+Content-Type: text/plain
+Content-Length: 8
+Last-Modified: Mon, 15 May 2017 18:04:40 GMT
+ETag: "ae780585f49b94ce1444eb7d28906123"
+Accept-Ranges: bytes
+Server: AmazonS3
+X-Amz-Cf-Id: k7XifgkJB1IQHybhZMTMtPjeV8Hs5zm0egoWi2EKJJcJ4qo8LSCisA==
+Cache-Control: no-cache, no-store, must-revalidate
+Date: Fri, 10 Apr 2020 21:04:56 GMT
+Connection: close
+
+success

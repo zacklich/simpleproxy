@@ -1,0 +1,87 @@
+
+
+Design decisions
+
+This proxy is multi-threaded, not multi-process.  It uses lots of code from the
+previous web server assignment.  No specific thread management is used, new threads 
+are spawned for each incoming connection and the threads exit when the page is served.
+
+Like PA2, there is a "connection_t" structure that is allocated when a new thread is
+created.  This structure holds the URL we are fetching, the host and port number
+of the proxy, the sockets we are communicating on, and other stuff.
+
+The main "web server" part of the proxy came from PA2:
+    webserver() 
+    webthread()
+    handle_http_get()
+    send_status()
+    close_connection()
+
+For each incoming connection, a thread is spawned.  That thread reads the URL from the
+browser, then consults the cache.  If the URL is in the cache the content is returned
+from the cache, else a new connection is made to a real website to get the page.
+When a real website is read, the data is sent both to the browser and stored in a 
+disk file for the cache.
+
+Wireshark was used to look at browser traffic to figure out which headers were important. 
+For this proxy, including the Host, User-Agent, Accept, and Upgrade-Insecure-Requests headers
+makes the proxy work better popular web sites.  At first I tried forwarding all headers to
+the actual host from the proxy but it was not needed.
+
+If a good "GET" is parsed by handle_http_get(), first the black list is checked
+using is_on_blacklist(), then the cache (find_page_by_url).  If the page is 
+in the cache it is sent from the cache (send_from_cache), or else the proxy sends
+the data from one socket out on the other (do_proxy).
+
+The cache is a double-linked list of cache_entry_t structures.  Double links are
+convenient so I can remove entries from the middle of the list.   The hash function is used to 
+make it easy to quickly compare URLs, and is also used to make the file names for the disk 
+cache files.  For a large cache a good modification might be to use some part of the 
+hash value to index an array of lists.
+
+Since the cache is modified by all of the threads, a mutex is used to protect the list 
+when changes are made.
+
+Each cache entry contains the linked list pointers, the hash value, the full URL, and an 
+expiration time.
+
+To age the cache, the main thread checks the cache entries once per second while it is 
+waiting for new connections to happen.  Expired pages are removed and the memory is freed.
+To check for an expired page the proxy simply compares the current time with the expiration
+time stored in the cache entry.
+
+The cache routines are:
+   djb2_hash()
+   find_page()
+   find_page_by_url()
+   remove_from_cache()
+   remove_From_cache_by_hash()
+   add_to_cache()
+   check_cache_timeout()
+
+
+The hash function used was found online.  It appears to be a hash that has been used and 
+studied a lot and works well with URL-sized strings.  I have not seen any collisions.
+
+The black list is a simple linked list, in a structure called blacklist_t.  First 
+the host names are compared, then the IP addresses the host names refer to are compared.  
+
+The black list functions are:
+    load_blacklist()
+    is_on_blacklist()
+
+
+Testing 
+
+In testing I found that many commercial web sites simply return a "permanently moved" 
+status that redirects the browser to an encrypted version.  I had to look around to find
+web sites that actually have unencrypted versions. 
+
+These websites are good tests:
+
+    eecs.lassonde.yorku.ca
+    www.mit.edu
+
+Colrado's web site redirects immediately to a https one.
+
+The cache definitely helps performance.
